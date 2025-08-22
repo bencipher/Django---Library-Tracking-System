@@ -9,8 +9,11 @@ app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
 app.conf.beat_schedule = {
-    "daily-work-email-sender": {
-        "task": "check_overdue_loans",
-        "schedule": crontab(day_of_week=1),
+    "check-overdue-loans-daily": {
+        "task": "library.tasks.check_overdue_loans",
+        "schedule": crontab(minute=0, hour=9),
+        "options": {
+            "expires": 3600,
+        },
     },
 }
