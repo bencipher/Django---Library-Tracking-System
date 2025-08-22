@@ -1,8 +1,9 @@
-version: '3.8'
+# version: '3.8'
 
 services:
   db:
     image: postgres:13
+    container_name: database
     environment:
       POSTGRES_DB: library_db
       POSTGRES_USER: library_user
@@ -14,16 +15,21 @@ services:
 
   redis:
     image: redis:6
+    container_name: broker-service
+    restart: always
     ports:
       - "6379:6379"
+    entrypoint: redis-server --appendonly yes
 
   web:
     build: .
-    command: sh -c "python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    container_name: web-service
+    command: python entrypoint.py web
     volumes:
       - .:/code
     ports:
       - "8000:8000"
+      - "5678:5678"
     env_file:
       - .env
     depends_on:
@@ -32,14 +38,31 @@ services:
 
   celery:
     build: .
-    command: celery -A library_system worker -l info
+    container_name: worker-service
+    command: python entrypoint.py celery
     volumes:
       - .:/code
+    ports:
+      - "5679:5679"
     env_file:
       - .env
     depends_on:
       - web
       - redis
 
+  flower:
+    build: .
+    container_name: flower-service
+    command: python entrypoint.py flower
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celery
+
 volumes:
   postgres_data:
+
+networks:
+  default:
+    name: library_dan

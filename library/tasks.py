@@ -1,7 +1,8 @@
-from celery import shared_task
+from celery import shared_task, Task
 from .models import Loan
 from django.core.mail import send_mail
 from django.conf import settings
+
 
 @shared_task
 def send_loan_notification(loan_id):
@@ -18,3 +19,13 @@ def send_loan_notification(loan_id):
         )
     except Loan.DoesNotExist:
         pass
+
+
+@shared_task
+def check_overdue_loans():
+    try:
+        defaulting_members = Loan.objects.get_defaulters()
+        for loan in defaulting_members:
+            send_loan_notification.delay(loan.id, is_overdue=True)
+    except Exception as exc:
+        raise
